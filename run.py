@@ -1,36 +1,26 @@
+from Settings import CHAT_SESSIONS
 from WebSocketServer.WebsocketServer import WebSockServer as WS
 from UserChatSession import UserChatSession
+from parser_1 import MessageParser
 from typing import Dict, Any
 import asyncio
 import redis
 import pickle
-
-def onChatStatus(sender, data):
-    pass
-
-def onChatConnect(sender, data):
-    pass
-
-def onchatDisconnect(sender, data):
-    pass
-
-def onMsg(sender: WS, message: Dict[str, Any]):
-    print(message)
-    if message.get("type") == "NewConnection":
-        print(f"New Connection from {message.get('data')}")
-        data = pickle.dumps(message.get('data'))
-        asyncio.create_task(sender.broadcast(data, message.get('websocket').path))
-  
+from threading import Thread
 
 
-def onstreamtimer(sender, data):
-    pass
-
-server = WS()
+server = WS(port=8011)
 loop = asyncio.new_event_loop()
 
 
-server.event.on('message', onMsg)
-loop.run_until_complete(server.start())
+def run():
+    try:
+        
+        server.event.on('message', MessageParser)
+        loop.run_until_complete(server.start())
+    except KeyboardInterrupt as e:
+        for key, session in CHAT_SESSIONS.items():
+            session.disconnect()
+        loop. run_until_complete(server.stop())
 
-
+run()

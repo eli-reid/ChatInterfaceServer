@@ -4,107 +4,78 @@ from typing import Optional
 import websockets
 import asyncio
 from websockets.server import serve, WebSocketServerProtocol
+from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
 from collections import defaultdict
 from src.EventHandler import EventHandler
-import logging
-import pickle
 
 
 class WebSockServer:
     def __init__(self, url: str = 'localhost', port: int=8001) -> None:
-        self.event: EventHandler = EventHandler()
-        self._clients: dict[str, set] = defaultdict(set)
-        self._url: str = url
-        self._port: int = port
+        self.event = EventHandler()
+        self._clients = defaultdict(set)
+        self._url = url
+        self._port = port
         self._lock = asyncio.Lock()
     
+    
     async def broadcast(self, message: bytes, path: str)->None:
-        print(f"Broadcasting message {message} to {path}")
-        clients = await self.getClients(path)
+        clients = await self.getClientsCopy(path)
+        deadClients = await self.sendToClients(message, clients)
+        await self.updateClients(path, clients.difference(deadClients))
+    
+    async def sendToClients(self, message: bytes, clients: set) -> set:
         deadClients = set()
-        for websocket in clients:
-            if not await self.send(message, websocket):
-                deadClients.add(websocket)
-        clients.difference_update(deadClients)
-        await self.updateClients(path, clients)
-
+        for clientSocket in clients:
+            if not await self.send(message, clientSocket):
+                deadClients.add(clientSocket)
+        return deadClients
     
-    async def send(self, message: bytes, websocket)->bool:
+    
+    async def send(self, message: bytes, clientSocket: WebSocketServerProtocol)->bool:
         try:
-            await websocket.send(message)
-            return True
-        except ConnectionClosedError as e:
-            return False
-        except Exception as e:
-            logging.error(f"Error: {e}")
-        return False
-
-   
-    async def getClients(self, path: str)->set:
-        async with self._lock:
-            if path not in self._clients:
-                self._clients[path] = set()
-            return self._clients.get(path).copy()
+            await clientSocket.send(message)
             
-    
+            return True
+        except (ConnectionClosedError, ConnectionClosed, ConnectionClosedOK):
+            return False
+
+
+    async def getClientsCopy(self, path: str)->set:
+        async with self._lock:
+            return self._clients.setdefault(path, set()).copy()
+            
+            
     async def updateClients(self, path: str, clients: set)->None:
         async with self._lock:
             if clients:
                 self._clients[path] = clients
-            elif path in self._clients:
-                del self._clients[path]
+            else:
+                self._clients.pop(path, None)
     
-    async def addClient(self, path: str, websocket: WebSocketServerProtocol)->None:
+    
+    async def addClient(self, clientSocket: WebSocketServerProtocol, path: str)->None:
         async with self._lock:
-            self._clients[path].add(websocket)
-            print(f"Adding client {websocket.remote_address} with path {path}")
-         
-    async def _messageHandler(self, websocket: WebSocketServerProtocol, path: str):
-        async for message in websocket:
-            await self.addClient(path, websocket)
-            data = pickle.loads(message)
-            data["websocket"] = websocket
-            self.event.emit(self, 'message', data )
+            self._clients[path].add(clientSocket)
+
+
+    async def _messageHandler(self, clientSocket: WebSocketServerProtocol, path: str) -> None:
+        await self.addClient(clientSocket, path)
+        try:
+            async for message in clientSocket:
+                self.event.emit(self, 'message', (path,message))
+        except (ConnectionClosedError, ConnectionClosed, ConnectionClosedOK):
+            async with self._lock:
+                self._clients[path].remove(clientSocket)
             
-    async def _server(self):
+
+
+    async def start(self):
         self.server = await websockets.serve(self._messageHandler, self._url, self._port)
         if self.server.is_serving:
             print(f"Server started at {self._url}:{self._port}")
-        
-        #asyncio.create_task(self.checkConnections())
         await self.server.serve_forever()
     
-    async def start(self):
-
-        await self._server()
        
     async def stop(self):
-        await self._server.close()
-        print("Server stopped")
-        
-    async def checkConnections (self):
-        
-        print("Checking connections")
-        deadClients = set()
-        while self.server.is_serving:
-            async with self._lock:
-                clients = self._clients.copy()
-            print("Checking connections...")
-            print(clients)
-            for connection in clients:
-                for websocket in clients[connection]:
-                    try:
-                        await websocket.ping()
-                        print(f"Connection alive: {websocket.remote_address}")
-                    except (websockets.exceptions.ConnectionClosedOK,
-                            websockets.exceptions.ConnectionClosed, 
-                            websockets.exceptions.ConnectionClosedError
-                            ) as e:
-                        deadClients.add(websocket)
-                        print(f"Connection closed: {websocket.remote_address}")
-                if deadClients:
-                    clients[connection].difference_update(deadClients)
-                    await self.updateClients(connection, clients[connection])
-            await asyncio.sleep(10)
- 
-        
+        await self.server.close()
+        print("Server stopped")        

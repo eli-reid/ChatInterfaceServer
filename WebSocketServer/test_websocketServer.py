@@ -1,136 +1,82 @@
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, patch
 from websockets import ConnectionClosedError
 from websockets.server import WebSocketServerProtocol
-from src.EventHandler import EventHandler
+from unittest.mock import AsyncMock, MagicMock, patch
 from .WebsocketServer import WebSockServer
+import random
 
-# Helper function to run coroutines in the test
-def run_coroutine(coroutine):
-    return asyncio.get_event_loop().run_until_complete(coroutine)
+# Helper function to run async tests
+def run_async(func):
+    return asyncio.get_event_loop().run_until_complete(func)
 
+# Test for broadcasting messages to multiple clients
 @pytest.mark.parametrize("message, path, client_count, expected_send_calls", [
-    (b"Hello, World!", "/test", 3, 3),  # TC_ID_01: All clients receive the message
-    (b"", "/empty", 2, 2),              # TC_ID_02: Send empty message to all clients
-    (b"Data", "/single", 1, 1),         # TC_ID_03: Single client receives a message
+    (b"Hello, World!", "/test", 3, 3),  # TC01: Happy path with 3 clients
+    (b"", "/empty", 2, 2),              # TC02: Empty message with 2 clients
+    (b"Data", "/none", 0, 0),           # TC03: No clients connected
 ])
 def test_broadcast(message, path, client_count, expected_send_calls):
     # Arrange
     server = WebSockServer()
     clients = {AsyncMock(spec=WebSocketServerProtocol) for _ in range(client_count)}
     server._clients[path] = clients
-    server.send = AsyncMock(return_value=True)
 
     # Act
-    run_coroutine(server.broadcast(message, path))
+    run_async(server.broadcast(message, path))
 
     # Assert
-    assert server.send.call_count == expected_send_calls
-    for client in clients:
-        server.send.assert_any_call(message, client)
+    actual_send_calls = sum(1 for client in clients if client.send.call_count == 1)
+    assert actual_send_calls == expected_send_calls, "All clients should receive the message exactly once."
 
-@pytest.mark.parametrize("message, websocket, expected_result", [
-    (b"Hello", AsyncMock(spec=WebSocketServerProtocol), True),  # TC_ID_04: Successful send
-    (b"Hello", AsyncMock(spec=WebSocketServerProtocol, send=AsyncMock(side_effect=ConnectionClosedError)), False),  # TC_ID_05: Connection closed error
-    (b"Hello", AsyncMock(spec=WebSocketServerProtocol, send=AsyncMock(side_effect=Exception("Error"))), False),  # TC_ID_06: General exception
+# Test for handling client disconnections during message sending
+@pytest.mark.parametrize("message, path, client_count, disconnect_count, expected_remaining_clients", [
+    (b"Update", "/test", 5, 2, 3),  # TC04: 2 out of 5 clients disconnect
+    (b"Update", "/test", 3, 3, 0),  # TC05: All clients disconnect
 ])
-def test_send(message, websocket, expected_result):
+def test_handle_disconnections(message, path, client_count, disconnect_count, expected_remaining_clients):
     # Arrange
     server = WebSockServer()
+    clients = {AsyncMock(spec=WebSocketServerProtocol) for _ in range(client_count)}
+    disconnect_clients = set(list(clients)[:disconnect_count])
+    for client in disconnect_clients:
+        client.send.side_effect = ConnectionClosedError
+    server._clients[path] = clients
 
     # Act
-    result = run_coroutine(server.send(message, websocket))
+    run_async(server.broadcast(message, path))
 
     # Assert
-    assert result == expected_result
+    assert len(server._clients[path]) == expected_remaining_clients, "Only connected clients should remain."
 
-@pytest.mark.parametrize("path, expected_clients", [
-    ("/test", {AsyncMock(spec=WebSocketServerProtocol)}),  # TC_ID_07: Path with one client
-    ("/empty", set()),                                    # TC_ID_08: Path with no clients
+# Test for adding a new client
+@pytest.mark.parametrize("path, initial_count, add_count", [
+    ("/test", 0, 1),  # TC06: Add first client
+    ("/test", 1, 1),  # TC07: Add another client
 ])
-def test_getClients(path, expected_clients):
+def test_add_client(path, initial_count, add_count):
     # Arrange
     server = WebSockServer()
-    server._clients[path] = expected_clients
+    server._clients[path] = {AsyncMock(spec=WebSocketServerProtocol) for _ in range(initial_count)}
+    new_clients = [AsyncMock(spec=WebSocketServerProtocol) for _ in range(add_count)]
 
     # Act
-    clients = run_coroutine(server.getClients(path))
+    for client in new_clients:
+        run_async(server.addClient(client, path))
 
     # Assert
-    assert clients == expected_clients
+    assert len(server._clients[path]) == initial_count + add_count, "All new clients should be added."
 
-@pytest.mark.parametrize("path, clients", [
-    ("/test", {AsyncMock(spec=WebSocketServerProtocol)}),  # TC_ID_09: Update non-empty client set
-    ("/empty", set()),                                    # TC_ID_10: Update empty client set
-])
-def test_updateClients(path, clients):
+# Test for server start and stop
+def test_server_start_stop():
     # Arrange
-    server = WebSockServer()
+    server = WebSockServer(port=8111)
+    server.server = AsyncMock()
 
     # Act
-    run_coroutine(server.updateClients(path, clients))
+    run_async(server.start())
+    run_async(server.stop())
 
     # Assert
-    if clients:
-        assert server._clients[path] == clients
-    else:
-        assert path not in server._clients
-
-@pytest.mark.parametrize("path, websocket", [
-    ("/test", AsyncMock(spec=WebSocketServerProtocol)),  # TC_ID_11: Add client to path
-])
-def test_addClient(path, websocket):
-    # Arrange
-    server = WebSockServer()
-
-    # Act
-    run_coroutine(server.addClient(path, websocket))
-
-    # Assert
-    assert websocket in server._clients[path]
-    
-    
-class AsyncIterator:
-    def __init__(self, seq):
-        self.iter = iter(seq)
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        try:
-            return next(self.iter)
-        except StopIteration as e:
-            raise StopAsyncIteration from e
-        
-
-
-@pytest.mark.parametrize("websocket, path, message", [
-    (AsyncMock(spec=WebSocketServerProtocol, spec_set=AsyncIterator([b"Message"])), "/test", b"Message"),  # TC_ID_12: Handle incoming message
-])
-def test_messageHandler(websocket, path, message):
-    # Arrange
-    server = WebSockServer()
-    server.addClient = AsyncMock()
-    server.event = EventHandler()
-    server.event.on = AsyncMock()
-
-    # Act
-    run_coroutine(server._messageHandler(websocket, path))
-
-    # Assert
-    server.addClient.assert_called_once_with(path, websocket)
-    #server.event.on.assert_called_once_with(server, 'message', message)
-
-# Test for server start and message handling
-def test_start():
-    # Arrange
-    server = WebSockServer()
-    server._server = AsyncMock()
-
-    # Act
-    run_coroutine(server.start())
-
-    # Assert
-    server._server.assert_called_once()
+    server.server.close.assert_called_once(), "Server should be closed properly."
+    assert server.server.is_serving == False, "Server should not be serving after stop."

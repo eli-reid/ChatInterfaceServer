@@ -10,18 +10,21 @@ class DatabaseInterface:
         
     def _connect(self):
         try:
+            
             self._conn = sqlite3.connect(self._db_file)
+            print(f"Connected to {self._db_file}")
             self._cursor = self._conn.cursor()
         except Error as e:
             print(f"Error: {e}")
             
     def execute(self, query: str):
+        
         self._cursor.execute(query)
         self._conn.commit()
         
     def fetch(self, query: str):
         self._cursor.execute(query)
-        return self._cursor.fetchall()
+        return self._cursor
     
     def close(self):
         self._conn.close()

@@ -1,18 +1,35 @@
 import abc
 import asyncio
 import Twitch
+from threading import Thread
+from Twitch.ChatInterface.TwitchChatInterface import TCISettings
 from typing import Dict, List, Callable, Coroutine
 from queue import Queue
 from Builtins.commandBase import commandBase 
 from Builtins.command import command
-from Settings import CHAT_THREAD_POOL, TWITCH_CHAT_PORT, TEST_MODE
+from Settings import TWITCH_CHAT_PORT, TEST_MODE
 from Settings import TWITCH_CHAT_URL, TWITCH_CHAT_CAPABILITIES, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
+from DatabaseInterface import DatabaseInterface
     
 #TODO: 
 # 1. Add a way to get the chat users from the chat
 # 2. store the chat users in the database
 # 3. Add a way to get the chat users from the database  
+class User:
+    def __init__(self, id, name, key) -> None:
+        self.id = id
+        self.name = name
+        self.key = key
+        self.commands = None
+        
+class UserSettings:
+    def __init__(self) -> None:
+        self.BotUser = None
+        self.BotOAuth = None
+        self.Streamer = None
+        self.StreamerOAuth = None
 
+    
 class UserChatSession:
 
     def __init__(self, user) -> None:
@@ -39,13 +56,12 @@ class UserChatSession:
         self.API: Twitch.Api = None
         self.botInfo = None
         self.streamerInfo = None
-        self._user: AUTH_USER_MODEL = user # type: ignore
+        self._user = user 
         self._messageQ: Queue = Queue(50)
         self._twitchChat: Twitch.Chat = Twitch.Chat()
         self._error = None
-        self.settings = None
+        self.settings = UserSettings()
         self._chatUsers: List = []
-        self.settings = self._user.chatsettings
         self.loadTwitchChatSettings()
 
         ############################# Event Subscriptions #############################
@@ -65,13 +81,12 @@ class UserChatSession:
 
     @property
     def status(self) -> Dict:
-        status = {"connected": self._twitchChat.isConnected,
-                   "error": self.error, 
-                   "bot": self.settings.BotUser, 
-                   "streamer": self.settings.Streamer
-                }
-        self.error = None
-        return status
+        return {
+            "connected": self._twitchChat.isConnected,
+            "error": self.error,
+            "bot": self.settings.BotUser,
+            "streamer": self.settings.Streamer,
+        }
     
     @property
     def isConnected(self) -> bool:
@@ -100,30 +115,21 @@ class UserChatSession:
 
 
     def loadTwitchChatSettings(self) -> None:
-        reconnect= self.isConnected
-
-        if self.settings is None:
-            self.settings = self._user.chatsettings
+        dbConnector = DatabaseInterface("D:\\FoxZBot2\\Fox_Z_Bot\\db.sqlite3")
+        data = dbConnector.fetch(f"SELECT * FROM Chat_chatsettings WHERE User_id={self._user.id}").fetchone()
+        dbConnector.close()
+        self.settings.BotOAuth = data[1]
+        self.settings.BotUser = data[2]
+        self.settings.Streamer = data[3]
+        self.settings.StreamerOAuth = data[4]
+ 
+        if self.settings.BotOAuth and self.settings.BotUser and self.settings.Streamer:
+            reconnect = self.isConnected
         
-        if self.isConnected:
-            self.disconnect()
-        if self.settings is not None:
-            self.API = Twitch.Api(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, self.settings.BotOAuth, self.scopes)
-            if not TEST_MODE:
-                usersInfo = self._runAsyncFunction(self.API.GetUsers,login=[self.settings.BotUser, self.settings.Streamer])  
-                if usersInfo:
-                    if self.settings.BotUser == self.settings.Streamer:
-                        self.botInfo = usersInfo.data[0]
-                        self.streamerInfo = usersInfo.data[0]
-                    else:
-                        self.botInfo = usersInfo.data[0]
-                        self.streamerInfo = usersInfo.data[1]
-                    print(f"Bot: {self.botInfo.id} Streamer: {self.streamerInfo.id}")
-            if self.streamerInfo is not None:
-                chatUserList: Twitch.Types.GetChattersResponse = self._runAsyncFunction(self.API.GetChatters,broadcaster_id=self.streamerInfo.id, moderator_id=self.botInfo.id)
-                print(chatUserList)
+            if self.isConnected:
+                self.disconnect()
 
-            chatSettings = Twitch.TCISettings(server=TWITCH_CHAT_URL, 
+            chatSettings = TCISettings(server=TWITCH_CHAT_URL, 
                                             port=TWITCH_CHAT_PORT, 
                                             caprequest=TWITCH_CHAT_CAPABILITIES, 
                                             user=self.settings.BotUser, 
@@ -131,30 +137,33 @@ class UserChatSession:
                                             channels=[self.settings.Streamer,],
                                             SSL=False)
             self._twitchChat.updateSettings(chatSettings)
-        if reconnect:
-            self.startChatClient()
+            if reconnect:
+                self.startChatClient()
+        
 
     def startChatClient(self) -> None:
         if not self._twitchChat.isConnected:
+            self.error = None
             self._twitchChat.run = True
-            CHAT_THREAD_POOL.apply_async(self._twitchChat.sendMsgFunction)
-            CHAT_THREAD_POOL.apply_async(self._twitchChat.receiveMsgFunction)
+            sendMsgThread = Thread(target=self._twitchChat.sendMsgFunction)
+            recieveMsgThread = Thread(target=self._twitchChat.receiveMsgFunction)
+            sendMsgThread.start()
+            recieveMsgThread.start()            
             self.error = None
             self._twitchChat.connect()
 
    
     def _parser(self, sender,  message: Twitch.MessageType) -> None:
-        if message.text is not None : 
+        if message.text is not None: 
             commandText = message.text.split(" ")[0]
             cmd = globals().get(commandText[1:])    
             if isinstance(cmd, abc.ABCMeta) and issubclass(cmd, commandBase) and commandText != "commandBase":
                 try:
                     cmd(self._twitchChat, message, self._user)
-                except:
-                    pass
-            else:
-                if message.text is not None:
-                    command(self._twitchChat, message, self._user).run(message.text.split(" ")[0])
+                except Exception as e:
+                    print(f"Error: {e.args}")#change to log
+            elif message.text is not None:
+                command(self._twitchChat, message, self._user).run(message.text.split(" ")[0])
 
 
     def addChatUser(self, message: Twitch.MessageType) -> None:
