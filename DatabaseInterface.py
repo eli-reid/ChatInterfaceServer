@@ -23,11 +23,21 @@ class DatabaseInterface:
         self._conn.commit()
         
     def fetch(self, query: str):
+        
         self._cursor.execute(query)
         return self._cursor
     
+    def fetchallAsDict(self, query: str):
+        self._conn.row_factory = self.dict_factory
+        self._cursor = self._conn.cursor()
+        self._cursor.execute(query)
+        return self._cursor.fetchall()
+    
     def close(self):
         self._conn.close()
+    
+    
+    def dict_factory(self, cursor, row):
+        return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
         
-    def __del__(self):
-        self.close()
+        

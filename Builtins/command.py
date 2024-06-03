@@ -10,13 +10,14 @@ from time import time
 from .parser import CommandItem, CommandParser
 
 class commandObj:
-    def __init__(self, command:str, data:str, roleRequired:str, usage:str, cooldown:int, enabled:bool, user) -> None:
+    def __init__(self, command:str, data:str, roleRequired:str, usage:str, cooldown:int, enabled:bool, lastUsed, user) -> None:
         self.command = command
         self.data = data
         self.roleRequired = roleRequired
         self.usage = usage
         self.cooldown = cooldown
         self.enabled = enabled
+        self.lastUsed = lastUsed
         self.user = user
 
 class command(commandBase):
@@ -24,10 +25,9 @@ class command(commandBase):
     def __init__(self, tci: TCI, message: Message, user) -> None:
         self._user = user
         self._commandObj = None
-        self._commandObjects = self._user.commands.all()
-        self._parser = CommandParser()
-        self._commandlist: list = list(self._commandObjects.values_list('command', flat=True))
+        self._commandObjects: dict = self._user.commands
         super().__init__(tci, message, "!command")
+        self._parser = CommandParser()
 
     def print(self) -> None:
        self.tci.sendMessage(self.message.channel, "Command List: " + ", ".join(self.commands))
@@ -54,27 +54,29 @@ class command(commandBase):
     def run(self, cmd:str ):
         print(f"User Role: {self.message.tags.get('mod')}")
         if self.isCommand(cmd):
-            commandObject = self._commandObjects.filter(command=cmd).first()
+            commandObject = self._commandObjects.get(cmd)
             iscoolDown: bool = self.onCoolDown(commandObject)
+            print(f"Command: {commandObject.command} Cooldown: {commandObject.cooldown} LastUsed: {commandObject.lastUsed} isCoolDown: {iscoolDown}")
             if (commandObject.lastUsed is None or commandObject.cooldown==0 or not iscoolDown) and commandObject.enabled:
                 if commandObject.cooldown > 0:
-                    commandObject.save()    
-                commandStr: str = self._parser.parseCommand(commandObject.data)
+                    commandObject.lastUsed = str(datetime.now())
+                commandStr: str = self._parser.parseCommand(self.tci, self.message, commandObject.data)
+                
                 self.tci.sendMessage(self.message.channel, commandStr)
               
           
     def onCoolDown(self, commandObj) -> bool:
-        lastUsed: float = datetime.timestamp(commandObj.lastUsed)
+        lastUsed: float = datetime.timestamp(datetime.strptime(commandObj.lastUsed, "%Y-%m-%d %H:%M:%S.%f"))
         currentTime: float = datetime.timestamp(datetime.now())
         cooldown: int = commandObj.cooldown
-        return currentTime - lastUsed >= cooldown
+        return currentTime - lastUsed <= cooldown
        
     @property
     def commands(self)->list:
-        return self._commandlist
+        return self._commandObjects.keys()
 
     def isCommand(self, command: str)->bool:
-        return command in self._commandlist or command in globals()
+        return command in self._commandObjects.keys() or command in globals()
     
     def _getCommandObject(self, command: str):
         return self._commandObjects.filter(command=command)

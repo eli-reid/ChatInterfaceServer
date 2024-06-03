@@ -65,7 +65,7 @@ class CommandParser:
         cmd.user = self._user
         return cmd
     
-    def parseCommand(self, commandData) -> str:
+    def parseCommand(self,tci, message, commandData) -> str:
         """
         Parse List
         $userid - Username in lower case
@@ -80,16 +80,17 @@ class CommandParser:
         TODO:
         target
         """      
-        print("Parsing Command")  
+        print("Parsing Command") 
+        print(message) 
         parseItems: dict = {
-            "/me": self.tci.globalUserState.display_name,
-            "$userid": self.message.username.lower(),
-            "$username": self.message.username,
-            "$botname": self.tci.globalUserState.display_name,
-            "$targetid": self.data[0],
+            "/me": tci.globalUSerState.display_name,
+            "$userid": message.username.lower(),
+            "$username": message.username,
+            "$botname": tci.globalUSerState.display_name,
+            #"$targetid": self.data[0],
         }
         #parse arguments for message text add to parseItems
-        for index, val in enumerate(self.message.text.split(" ")):
+        for index, val in enumerate(message.text.split(" ")):
             if index > 9:
                 break
             parseItems[f"$arg{index}"] = val

@@ -6,7 +6,7 @@ from Twitch.ChatInterface.TwitchChatInterface import TCISettings
 from typing import Dict, List, Callable, Coroutine
 from queue import Queue
 from Builtins.commandBase import commandBase 
-from Builtins.command import command
+from Builtins.command import command, commandObj
 from Settings import TWITCH_CHAT_PORT, TEST_MODE
 from Settings import TWITCH_CHAT_URL, TWITCH_CHAT_CAPABILITIES, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
 from DatabaseInterface import DatabaseInterface
@@ -63,6 +63,7 @@ class UserChatSession:
         self.settings = UserSettings()
         self._chatUsers: List = []
         self.loadTwitchChatSettings()
+        self._user.commands = self.loadCommands()
 
         ############################# Event Subscriptions #############################
         self._twitchChat.onMessage(self._parser)
@@ -113,7 +114,25 @@ class UserChatSession:
         self._twitchChat.run = False
         self._twitchChat.disconnect()
 
-
+    def loadCommands(self) -> None:
+        dbConnector = DatabaseInterface("D:\\FoxZBot2\\Fox_Z_Bot\\db.sqlite3")
+        data = dbConnector.fetchallAsDict(f"SELECT * FROM Commands_commands WHERE User_id={self._user.id}")
+        dbConnector.close()
+        return {
+            item['command']: commandObj(
+                command=item['command'],
+                data=item['data'],
+                roleRequired=item['roleRequired'],
+                usage=item['usage'],
+                cooldown=item['cooldown'],
+                enabled=item['enabled'],
+                lastUsed=item['lastUsed'],
+                user=self._user
+            )
+            for item in data
+        }
+        
+        
     def loadTwitchChatSettings(self) -> None:
         dbConnector = DatabaseInterface("D:\\FoxZBot2\\Fox_Z_Bot\\db.sqlite3")
         data = dbConnector.fetch(f"SELECT * FROM Chat_chatsettings WHERE User_id={self._user.id}").fetchone()
@@ -136,6 +155,7 @@ class UserChatSession:
                                             password=self.settings.BotOAuth, 
                                             channels=[self.settings.Streamer,],
                                             SSL=False)
+            print(chatSettings.caprequest)
             self._twitchChat.updateSettings(chatSettings)
             if reconnect:
                 self.startChatClient()
@@ -169,18 +189,7 @@ class UserChatSession:
     def addChatUser(self, message: Twitch.MessageType) -> None:
         msgUserInfo: dict = {}
         msgparts = message.raw.split(";")
-        for part in msgparts:
-            key, value = part.split("=")
-            msgUserInfo[key] = value
-        chatUser = self._user.chatusers.get_or_create(username=message.username, room=message.channel)[0]
-        chatUser.userId = msgUserInfo["user-id"]
-        chatUser.isMod = msgUserInfo["mod"]
-        chatUser.isBroadcaster = msgUserInfo["user-id"] == msgUserInfo["room-id"]
-        chatUser.isSub = msgUserInfo["subscriber"]
-        chatUser.isEditor = msgUserInfo["turbo"]
-        chatUser.save()
-
-
+     
     
     ############################# Helper Functions #############################
     def _runAsyncFunction(self, func: Coroutine ,*args, **kwargs) -> any:
