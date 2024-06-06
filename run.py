@@ -8,14 +8,10 @@ import redis
 import pickle
 from threading import Thread
 
-
-server = WS(port=8011)
-loop = asyncio.new_event_loop()
-
-
 def run():
     try:
-        
+        server = WS(port=8011)
+        loop = asyncio.new_event_loop()
         server.event.on('message', MessageParser)
         loop.run_until_complete(server.start())
     except KeyboardInterrupt as e:

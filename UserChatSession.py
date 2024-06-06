@@ -21,6 +21,7 @@ class User:
         self.name = name
         self.key = key
         self.commands = None
+        self.quotes = None
         
 class UserSettings:
     def __init__(self) -> None:
