@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from Twitch.ChatInterface.MessageHandler import Message
 from Twitch.ChatInterface import Chat as TCI
-class CommandClass(type):
-    pass
+
 class commandBase(ABC):
-    def __init__(self, tci:TCI, message: Message, cmd:str) -> None:
+    def __init__(self, tci:TCI, message: Message, cmd:str, *args, **kwargs ) -> None:
         self.message = message
         self.tci = tci
         self.data = self.message.text

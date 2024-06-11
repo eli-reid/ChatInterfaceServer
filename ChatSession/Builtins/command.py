@@ -1,34 +1,20 @@
-
 from random import choice
 from Twitch.ChatInterface.MessageHandler import Message
 from Twitch.ChatInterface import Chat as TCI
 from .commandBase import commandBase
-from datetime import datetime, timedelta
+from datetime import datetime
 from time import time
-
-
-from .parser import CommandItem, CommandParser
-
-class commandObj:
-    def __init__(self, command:str, data:str, roleRequired:str, usage:str, cooldown:int, enabled:bool, lastUsed, user) -> None:
-        self.command = command
-        self.data = data
-        self.roleRequired = roleRequired
-        self.usage = usage
-        self.cooldown = cooldown
-        self.enabled = enabled
-        self.lastUsed = lastUsed
-        self.user = user
+from .commandParser import CommandParser
+from .dataObjects import commandObj
+from .user import User
 
 class command(commandBase):
-
-    def __init__(self, tci: TCI, message: Message, user) -> None:
+    def __init__(self, tci: TCI, message: Message, user: User) -> None:
         self._user = user
-        self._commandObj = None
         self._commandObjects: dict = self._user.commands
-        super().__init__(tci, message, "!command")
         self._parser = CommandParser()
-
+        super().__init__(tci, message, "!command")
+        
     def print(self) -> None:
        self.tci.sendMessage(self.message.channel, "Command List: " + ", ".join(self.commands))
             
@@ -40,19 +26,17 @@ class command(commandBase):
             if len(tmp)<2:
                 self.tci.sendMessage(self.message.channel, "command has no data")
             else:
-                command: CommandItem = self._parser.parseNewCommand(tmp)
-                cmdobj = self._commandObj(command=command.command, data=command.data, roleRequired=command.roleRequired, usage=command.usage, cooldown=command.cooldown, enabled=command.enabled, user=command.user)
-                cmdobj.full_clean()  
-                cmdobj.save()   
+                command: commandObj = self._parser.parseNewCommand(tmp, self._user.id)
+                self._user.commands[command.command] = command
                 self.tci.sendMessage(self.message.channel,"Command Added")
                 
     def createCommandObject(self, cmdParts):
-        command: CommandItem = self._parser.parseNewCommand(cmdParts)
+        command: commandObj = self._parser.parseNewCommand(cmdParts)
+        
     def remove(self) -> None:
         pass
 
     def run(self, cmd:str ):
-        print(f"User Role: {self.message.tags.get('mod')}")
         if self.isCommand(cmd):
             commandObject = self._commandObjects.get(cmd)
             iscoolDown: bool = self.onCoolDown(commandObject)
@@ -63,8 +47,8 @@ class command(commandBase):
                 commandStr: str = self._parser.parseCommand(self.tci, self.message, commandObject.data)
                 
                 self.tci.sendMessage(self.message.channel, commandStr)
-              
-          
+
+
     def onCoolDown(self, commandObj) -> bool:
         lastUsed: float = datetime.timestamp(datetime.strptime(commandObj.lastUsed, "%Y-%m-%d %H:%M:%S.%f"))
         currentTime: float = datetime.timestamp(datetime.now())
@@ -78,5 +62,5 @@ class command(commandBase):
     def isCommand(self, command: str)->bool:
         return command in self._commandObjects.keys() or command in globals()
     
-    def _getCommandObject(self, command: str):
-        return self._commandObjects.filter(command=command)
+    def _getCommandObject(self, command: str) -> commandObj:
+        return self._commandObjects.get(command)

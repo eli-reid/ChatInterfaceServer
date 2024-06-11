@@ -1,18 +1,7 @@
-
-
-class CommandItem:
-    command: str
-    data: str
-    roleRequired: str
-    usage: str
-    cooldown: int
-    enabled: bool
-    user: str
-
-
+from datetime import datetime
+from .dataObjects import commandObj
 class CommandParser:
-    
-    def parseNewCommand(self, commandData: list) -> CommandItem:
+    def parseNewCommand(self, commandData: list, user_id) -> commandObj:  # type: ignore
         """
         cooldown
             +cd - cooldown followed by int
@@ -40,7 +29,7 @@ class CommandParser:
             "SB": "stream both"
         } 
        
-        cmd = CommandItem()
+        cmd = commandObj()
         cmd.command = commandData.pop(0)
         for key, value in role.items():
             if key in commandData:
@@ -58,15 +47,20 @@ class CommandParser:
                 cmd.cooldown = commandData.pop(cooldownIndex)
             commandData.pop(commandData.index("+cd"))
         else:
-            cmd.cooldown = 5  
+            cmd.cooldown = 5
               
         cmd.data = " ".join(commandData)
+        cmd.roleRequired = "any" if cmd.roleRequired is None else cmd.roleRequired
+        cmd.usage = "stream Chat" if cmd.usage is None else cmd.usage
         cmd.enabled = True
-        cmd.user = self._user
+        cmd.user = user_id
+        cmd.lastUsed = datetime.now()
         return cmd
     
     def parseCommand(self,tci, message, commandData) -> str:
+        
         """
+        
         Parse List
         $userid - Username in lower case
         $username - display Username as normal
@@ -80,13 +74,10 @@ class CommandParser:
         TODO:
         target
         """      
-        print("Parsing Command") 
-        print(message) 
         parseItems: dict = {
-            "/me": tci.globalUSerState.display_name,
             "$userid": message.username.lower(),
             "$username": message.username,
-            "$botname": tci.globalUSerState.display_name,
+            "$botname": tci.globalUserState.display_name,
             #"$targetid": self.data[0],
         }
         #parse arguments for message text add to parseItems
