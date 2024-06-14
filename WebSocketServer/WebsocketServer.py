@@ -3,7 +3,7 @@ import asyncio
 from websockets.server import serve, WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
 from collections import defaultdict
-from src.EventHandler import EventHandler
+from EventHandler_Edog0049a import EventHandler
 
 
 class WebSockServer:

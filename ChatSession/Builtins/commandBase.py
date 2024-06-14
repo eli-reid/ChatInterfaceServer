@@ -1,9 +1,12 @@
-from abc import ABC, abstractmethod
-from Twitch.ChatInterface.MessageHandler import Message
-from Twitch.ChatInterface import Chat as TCI
+from abc import ABC, abstractmethod, abstractproperty
+from Twitch_Edog0049a import ChatInterface as TCI
+from Twitch_Edog0049a.ChatInterface.MessageHandler import Message
+
+
 
 class commandBase(ABC):
-    def __init__(self, tci:TCI, message: Message, cmd:str, *args, **kwargs ) -> None:
+    def __init__(self, tci:TCI, message: Message, cmd:str, roleRequire, cooldown=30, *args, **kwargs ) -> None:
+        self._roleReqired = roleRequire
         self.message = message
         self.tci = tci
         self.data = self.message.text
@@ -16,15 +19,19 @@ class commandBase(ABC):
             else:
                 print("command print")
                 self.print() 
-
+    @property
+    def roleRequired(self):
+        return self._roleReqired
+    
+    
     @abstractmethod
     def add(self):
-        pass
+        ...
     
     @abstractmethod
     def remove(self):
-        pass
+        ...
     
     @abstractmethod
     def print(self):
-        pass
+        ...

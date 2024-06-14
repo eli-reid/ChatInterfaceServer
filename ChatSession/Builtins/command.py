@@ -13,7 +13,7 @@ class command(commandBase):
         self._user = user
         self._commandObjects: dict = self._user.commands
         self._parser = CommandParser()
-        super().__init__(tci, message, "!command")
+        super().__init__(tci, message, "!command", roleRequire='mod')
         
     def print(self) -> None:
        self.tci.sendMessage(self.message.channel, "Command List: " + ", ".join(self.commands))

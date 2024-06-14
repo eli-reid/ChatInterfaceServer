@@ -1,7 +1,7 @@
 import abc
 import asyncio
-import Twitch
-from Twitch.ChatInterface.TwitchChatInterface import TCISettings
+import Twitch_Edog0049a as Twitch
+from Twitch_Edog0049a.ChatInterface.TwitchChatInterface import TCISettings
 from typing import Dict, List, Callable
 from queue import Queue
 from .Builtins.commandBase import commandBase
