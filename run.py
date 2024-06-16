@@ -1,12 +1,7 @@
-from Settings import CHAT_SESSIONS
+from ChatSession.Settings import CHAT_SESSIONS
 from WebSocketServer.WebsocketServer import WebSockServer as WS
-from UserChatSession import UserChatSession
-from parser_1 import MessageParser
-from typing import Dict, Any
+from WebSocketServer.MessageParser import MessageParser
 import asyncio
-import redis
-import pickle
-from threading import Thread
 
 def run():
     try:
@@ -16,7 +11,7 @@ def run():
         loop.run_until_complete(server.start())
     except KeyboardInterrupt as e:
         for key, session in CHAT_SESSIONS.items():
+            print(f"Disconnecting {key}")
             session.disconnect()
-        loop. run_until_complete(server.stop())
-
+        loop.close()
 run()

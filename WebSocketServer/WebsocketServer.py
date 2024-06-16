@@ -1,12 +1,9 @@
-from websockets import ConnectionClosedError, server 
-from threading import Thread
-from typing import Optional
 import websockets
 import asyncio
 from websockets.server import serve, WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
 from collections import defaultdict
-from src.EventHandler import EventHandler
+from EventHandler_Edog0049a import EventHandler
 
 
 class WebSockServer:
@@ -16,8 +13,7 @@ class WebSockServer:
         self._url = url
         self._port = port
         self._lock = asyncio.Lock()
-    
-    
+        
     async def broadcast(self, message: bytes, path: str)->None:
         clients = await self.getClientsCopy(path)
         deadClients = await self.sendToClients(message, clients)
@@ -30,20 +26,16 @@ class WebSockServer:
                 deadClients.add(clientSocket)
         return deadClients
     
-    
     async def send(self, message: bytes, clientSocket: WebSocketServerProtocol)->bool:
         try:
             await clientSocket.send(message)
-            
             return True
         except (ConnectionClosedError, ConnectionClosed, ConnectionClosedOK):
             return False
 
-
     async def getClientsCopy(self, path: str)->set:
         async with self._lock:
             return self._clients.setdefault(path, set()).copy()
-            
             
     async def updateClients(self, path: str, clients: set)->None:
         async with self._lock:
@@ -52,14 +44,13 @@ class WebSockServer:
             else:
                 self._clients.pop(path, None)
     
-    
     async def addClient(self, clientSocket: WebSocketServerProtocol, path: str)->None:
         async with self._lock:
             self._clients[path].add(clientSocket)
 
-
     async def _messageHandler(self, clientSocket: WebSocketServerProtocol, path: str) -> None:
         await self.addClient(clientSocket, path)
+        print(f"Client connected to {path}")
         try:
             async for message in clientSocket:
                 self.event.emit(self, 'message', (path,message))
@@ -67,15 +58,12 @@ class WebSockServer:
             async with self._lock:
                 self._clients[path].remove(clientSocket)
             
-
-
     async def start(self):
         self.server = await websockets.serve(self._messageHandler, self._url, self._port)
         if self.server.is_serving:
             print(f"Server started at {self._url}:{self._port}")
         await self.server.serve_forever()
     
-       
     async def stop(self):
         await self.server.close()
         print("Server stopped")        
