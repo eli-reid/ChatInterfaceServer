@@ -1,7 +1,9 @@
 from ChatSession.Settings import CHAT_SESSIONS
 from WebSocketServer.WebsocketServer import WebSockServer as WS
-from WebSocketServer.MessageParser import MessageParser
+from MessageParser import MessageParser
 import asyncio
+
+
 
 def run():
     try:

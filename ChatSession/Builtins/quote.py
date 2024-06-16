@@ -1,6 +1,6 @@
 from random import choice
-from Twitch.ChatInterface.MessageHandler import Message
-from Twitch.ChatInterface import Chat as TCI
+from Twitch_Edog0049a.ChatInterface.MessageHandler import Message
+from Twitch_Edog0049a.ChatInterface import Chat as TCI
 from .commandBase import commandBase
 from .dataObjects import quoteObj
 

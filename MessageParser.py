@@ -2,7 +2,7 @@ import asyncio
 import pickle
 from ChatSession.Settings import CHAT_SESSIONS
 from ChatSession.UserChatSession import UserChatSession, User
-from .WebsocketServer import WebSockServer 
+from WebSocketServer.WebsocketServer import WebSockServer 
 
 class MessageParser:
     def __init__(self, sender: WebSockServer, data: tuple) -> None:
@@ -18,7 +18,6 @@ class MessageParser:
         asyncio.create_task(self.parse())
         
     async def parse(self):
-        print(f"PARSING: {self.message}")
         await self._dispatch()
         
     async def chat_connect(self):

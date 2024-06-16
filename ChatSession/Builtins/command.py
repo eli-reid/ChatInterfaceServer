@@ -1,15 +1,15 @@
 from random import choice
-from Twitch.ChatInterface.MessageHandler import Message
-from Twitch.ChatInterface import Chat as TCI
+from Twitch_Edog0049a.ChatInterface.MessageHandler import Message
+from Twitch_Edog0049a.ChatInterface import Chat as TCI
 from .commandBase import commandBase
 from datetime import datetime
 from time import time
 from .commandParser import CommandParser
 from .dataObjects import commandObj
-from .user import User
+
 
 class command(commandBase):
-    def __init__(self, tci: TCI, message: Message, user: User) -> None:
+    def __init__(self, tci: TCI, message: Message, user) -> None:
         self._user = user
         self._commandObjects: dict = self._user.commands
         self._parser = CommandParser()

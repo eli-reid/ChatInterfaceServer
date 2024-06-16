@@ -1,20 +1,12 @@
-import abc
-import asyncio
 import Twitch_Edog0049a as Twitch
 from Twitch_Edog0049a.ChatInterface.TwitchChatInterface import TCISettings
 from typing import Dict, List, Callable
 from queue import Queue
-from .Builtins.commandBase import commandBase
-from .Builtins.quote import quote
-from .Builtins.dataObjects import commandObj, quoteObj
-from .Builtins.command import command
-from .Builtins.timer import timer
-from .Database.DatabaseInterface import DatabaseInterface
 from .Builtins.user import User
 from ChatSession.Settings import TWITCH_CHAT_PORT, TEST_MODE
 from ChatSession.Settings import TWITCH_CHAT_URL, TWITCH_CHAT_CAPABILITIES, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
 from .utilis import runCallback
-    
+from .chatParser import parser
 #TODO: 
 # 1. Add a way to get the chat users from the chat
 # 2. store the chat users in the database
@@ -41,19 +33,19 @@ class UserChatSession:
             Twitch.Scope.User.Manage.Chat_color,
             Twitch.Scope.User.Manage.Whispers,        
         ]
-    
         self.API: Twitch.Api = None
         self._user = user 
         self._messageQ: Queue = Queue(50)
-        self._twitchChatSettingsLoaded: bool = False
+        self._chatSettingsLoaded: bool = False
         self._twitchChat = Twitch.Chat(self._loadChatSettings())
         self._error = None
         self._chatUsers: List = []
         self.botInfo = None
         self.streamerInfo = None
+        self._parser = parser(self)
     
         ############################# Event Subscriptions #############################
-        self._twitchChat.onMessage(self._parser)
+        self._twitchChat.onMessage(self._parser.parse)
         self._twitchChat.onReceived(self._onRecieved)
         self._twitchChat.onLoginError(self._onLoginError)
         self._twitchChat.onConnected(self._onConnected)
@@ -72,23 +64,10 @@ class UserChatSession:
         self._twitchChat.disconnect()
 
     def startChatClient(self) -> None:
-        if not self._twitchChat.isConnected and self._twitchChatSettingsLoaded:
+        if not self._twitchChat.isConnected and self._chatSettingsLoaded:
             self._user.cacheAllComands()
             self._twitchChat.start()     
             self._twitchChat.connect()
-            
-    def _parser(self, sender,  message: Twitch.MessageType) -> None:
-        if message.text is not None and message.text.startswith("!"):
-            commandText = message.text.split(" ")[0]
-            cmd = globals().get(commandText[1:])    
-            if isinstance(cmd, abc.ABCMeta) and issubclass(cmd, commandBase) and commandText != "commandBase":
-                try:
-                    cmd(self._twitchChat, message, self._user)
-                except Exception as e:
-                    print(f"Error: {e.args}")#change to log
-                    
-        elif message.text is not None:
-            command(self._twitchChat, message, self._user).run(message.text.split(" ")[0])     
     
     @property
     def status(self) -> Dict:
@@ -116,28 +95,28 @@ class UserChatSession:
             self._runCallback(self.onError, self, value)
             
     def _loadChatSettings(self) -> TCISettings:
-        if self._user.settings.BotOAuth and self._user.settings.BotUser and self._user.settings.Streamer:
-            self._twitchChatSettingsLoaded = True
-            return TCISettings(server=TWITCH_CHAT_URL, 
-                                port=TWITCH_CHAT_PORT, 
-                                caprequest=TWITCH_CHAT_CAPABILITIES, 
-                                user=self._user.settings.BotUser, 
-                                password=self._user.settings.BotOAuth, 
-                                channels=[self._user.settings.Streamer,],
-                                SSL=False
-                            )
+        self._chatSettingsLoaded = self._hasRequiredChatSettings
+        if self._chatSettingsLoaded:
+            settings = {
+                'channels': [self._user.settings.Streamer],
+                'user' : self._user.settings.BotUser,
+                'password' : self._user.settings.BotOAuth
+            }
         else:
-            self._twitchChatSettingsLoaded = False
-            return TCISettings()
+            settings={}
+        return TCISettings(**settings)
+    
+    def _hasRequiredChatSettings(self):
+        return self._user.settings.BotOAuth and self._user.settings.BotUser and self._user.settings.Streamer
     
     def _updateChatSettings(self) -> None:
         self._user.loadSettings()
-        reconnect = self.isConnected
-        if self.isConnected:
+        reconnect = self._twitchChat.isConnected
+        if self._twitchChat.isConnected:
             self.disconnect()
-            self._twitchChat.updateSettings(self._loadChatSettings())
-            if reconnect and self._twitchChatSettingsLoaded:
-                self.startChatClient()
+        self._twitchChat.updateSettings(self._loadChatSettings())
+        if reconnect and self._chatSettingsLoaded:
+            self.startChatClient()
 
     ############################# Event Handlers #############################
     def _onLoginError(self, sender, message) -> None:

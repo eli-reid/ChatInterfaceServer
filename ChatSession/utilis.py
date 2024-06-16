@@ -13,4 +13,4 @@ def runCallback(func: Callable, *args, **kwargs) -> None:
     if asyncio.iscoroutinefunction(func):
         runAsyncFunction(func, *args, **kwargs)
     else:
-        func(*args, **kwargs)
+       func(*args, **kwargs)

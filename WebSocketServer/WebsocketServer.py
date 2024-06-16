@@ -50,7 +50,6 @@ class WebSockServer:
 
     async def _messageHandler(self, clientSocket: WebSocketServerProtocol, path: str) -> None:
         await self.addClient(clientSocket, path)
-        print(f"Client connected to {path}")
         try:
             async for message in clientSocket:
                 self.event.emit(self, 'message', (path,message))

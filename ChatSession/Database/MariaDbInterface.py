@@ -1,19 +1,29 @@
 import mariadb
 from mariadb import Error
+from contextlib import contextmanager
+
 
 class MariaDbInterface:
-    def __init__(self)-> None:
+    def __init__(self, user: str, password: str, host: str, port: int, database: str,  *arg, **kwargs)-> None:
+            
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = port
+        self.database = database   
         self._con = None
         self._cursor = None
-    
-    def _connect(self, user: str, password: str, host: str, port: int, database: str)-> None:
+
+
+    def connect(self)-> None:
+          
         try:
             self._con = mariadb.connect(        
-                            user=user,
-                            password=password,
-                            host=host,
-                            port=port,
-                            database=database   
+                            user=self.user,
+                            password=self.password,
+                            host=self.host,
+                            port=self.port,
+                            database=self.database   
                     )
             self._cursor = self._con.cursor()
         except Error as e:
@@ -24,5 +34,5 @@ class MariaDbInterface:
         if autoCommit:
             self._con.commit()
         
-    def _close(self)-> None:
+    def close(self)-> None:
         self._con.close()
