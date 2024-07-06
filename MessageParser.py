@@ -23,7 +23,7 @@ class MessageParser:
     async def chat_connect(self):
         self.session.startChatClient()
         while not self.session._twitchChat.isConnected:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.01)
         await self.chat_status()
         
     async def chat_disconnect(self):

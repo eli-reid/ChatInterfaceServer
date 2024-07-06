@@ -53,6 +53,7 @@ class WebSockServer:
         try:
             async for message in clientSocket:
                 self.event.emit(self, 'message', (path,message))
+                await asyncio.sleep(0.01)
         except (ConnectionClosedError, ConnectionClosed, ConnectionClosedOK):
             async with self._lock:
                 self._clients[path].remove(clientSocket)
@@ -61,7 +62,7 @@ class WebSockServer:
         self.server = await websockets.serve(self._messageHandler, self._url, self._port)
         if self.server.is_serving:
             print(f"Server started at {self._url}:{self._port}")
-        await self.server.serve_forever()
+        await self.server.start_serving
     
     async def stop(self):
         await self.server.close()
