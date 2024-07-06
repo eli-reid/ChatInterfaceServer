@@ -25,7 +25,7 @@ class SqliteInterface:
             self._conn = sqlite3.connect(self._db_file)
             print(f"Connected to {self._db_file}")
             self._cursor = self._conn.cursor()
-        except Error as e:
+        except Exception as e:
             print(f"Error: {e}")
  
     def _execute(self, query, autoCommit: bool=True)-> None:
@@ -37,11 +37,14 @@ class SqliteInterface:
             self._cursor.execute(query)
             if autoCommit:
                 self._conn.commit()
-        except Error as e:
+        except Exception as e:
             print(f"Error: {e}")
     
     def close(self):
-        self._conn.close()
+        try:
+            self._conn.close()
+        except:
+            pass
     
         
         
