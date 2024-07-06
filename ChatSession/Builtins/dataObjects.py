@@ -23,3 +23,9 @@ class streamTimerObj:
         self.endMsg = endMsg
         self.token = token
   
+class UserSettings:
+    def __init__(self,botUser=None, botOAuth=None, streamer=None, streamOAuth=None) -> None:
+        self.BotUser = botUser
+        self.BotOAuth = botOAuth
+        self.Streamer = streamer
+        self.StreamerOAuth = streamOAuth

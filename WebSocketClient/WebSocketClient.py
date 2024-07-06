@@ -5,7 +5,7 @@ import websockets
 import logging
 from websockets.client import WebSocketClientProtocol
 from EventHandler_Edog0049a import EventHandler
-from enum import Enum
+
 class WebsocketClient:
     TIMERDEFAULT =.1
     class EVENTENUM():

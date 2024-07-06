@@ -1,4 +1,5 @@
 import Twitch_Edog0049a as Twitch
+from threading import Thread
 from Twitch_Edog0049a.ChatInterface.TwitchChatInterface import TCISettings
 from typing import Dict, List, Callable
 from queue import Queue
@@ -59,14 +60,14 @@ class UserChatSession:
         self.onDisconnected: Callable = lambda sender, message: None
        
     def disconnect(self) -> None:
-        self._user.updateCommands()
+        #self._user.updateCommands()
         self._user.clearCache()
         self._twitchChat.disconnect()
 
     def startChatClient(self) -> None:
         if not self._twitchChat.isConnected and self._chatSettingsLoaded:
             self._user.cacheAllComands()
-            self._twitchChat.start()     
+            self._twitchChat.start()                 
             self._twitchChat.connect()
     
     @property

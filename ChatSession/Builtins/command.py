@@ -42,7 +42,7 @@ class command(commandBase):
             iscoolDown: bool = self.onCoolDown(commandObject)
             print(f"Command: {commandObject.command} Cooldown: {commandObject.cooldown} LastUsed: {commandObject.lastUsed} isCoolDown: {iscoolDown}")
             if (commandObject.lastUsed is None or commandObject.cooldown==0 or not iscoolDown) and commandObject.enabled:
-                if commandObject.cooldown > 0:
+                if commandObject.cooldown >= 0:
                     commandObject.lastUsed = str(datetime.now())
                 commandStr: str = self._parser.parseCommand(self.tci, self.message, commandObject.data)
                 
@@ -50,9 +50,14 @@ class command(commandBase):
 
 
     def onCoolDown(self, commandObj) -> bool:
-        lastUsed: float = datetime.timestamp(datetime.strptime(commandObj.lastUsed, "%Y-%m-%d %H:%M:%S.%f"))
-        currentTime: float = datetime.timestamp(datetime.now())
-        cooldown: int = commandObj.cooldown
+        try:
+            lastUsed: float = datetime.timestamp(datetime.strptime(commandObj.lastUsed, "%Y-%m-%d %H:%M:%S.%f"))
+            currentTime: float = datetime.timestamp(datetime.now())
+            cooldown: int = commandObj.cooldown
+        except ValueError:
+            commandObj.lastUsed = str(datetime.now())
+            return False
+            
         return currentTime - lastUsed <= cooldown
        
     @property

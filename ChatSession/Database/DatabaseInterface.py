@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from .settings import SQLITE as DB
+from .settings import DB
 
 class DatabaseInterface(DB['TYPE']):
     def __init__(self, *args, **kwargs):
@@ -32,4 +32,14 @@ def DBConnect(db):
         db.connect()
         yield db
     finally:
-        db.close
+        db.close()
+        
+
+@contextmanager
+def Database():
+    try:
+        db = DatabaseInterface()
+        db.connect()
+        yield db
+    finally:
+        db.close()

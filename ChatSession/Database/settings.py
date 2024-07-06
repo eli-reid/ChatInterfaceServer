@@ -21,3 +21,5 @@ MARIADB = {
         'database' : None
     }
 }
+
+DB = SQLITE
