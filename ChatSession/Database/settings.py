@@ -7,7 +7,7 @@ from .SqliteInterface import SqliteInterface
 SQLITE = {
     'TYPE' : SqliteInterface,
     'SETTINGS' : {
-        'db_file':'D:\\FoxZBot2\\Fox_Z_Bot\\db.sqlite3'
+        'db_file':'/home/django/fox.db'
         }
 }
 
