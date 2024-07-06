@@ -62,7 +62,7 @@ class WebSockServer:
         self.server = await websockets.serve(self._messageHandler, self._url, self._port)
         if self.server.is_serving:
             print(f"Server started at {self._url}:{self._port}")
-        await self.server.start_serving
+        await self.server.serv()
     
     async def stop(self):
         await self.server.close()
