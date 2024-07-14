@@ -7,7 +7,6 @@ from time import time
 from .commandParser import CommandParser
 from .dataObjects import commandObj
 
-
 class command(commandBase):
     def __init__(self, tci: TCI, message: Message, user) -> None:
         self._user = user
@@ -40,14 +39,12 @@ class command(commandBase):
         if self.isCommand(cmd):
             commandObject = self._commandObjects.get(cmd)
             iscoolDown: bool = self.onCoolDown(commandObject)
-            print(f"Command: {commandObject.command} Cooldown: {commandObject.cooldown} LastUsed: {commandObject.lastUsed} isCoolDown: {iscoolDown}")
+            print(f"Command: {cmd} Cooldown: {commandObject.cooldown} LastUsed: {commandObject.lastUsed} isCoolDown: {iscoolDown}")
             if (commandObject.lastUsed is None or commandObject.cooldown==0 or not iscoolDown) and commandObject.enabled:
-                if commandObject.cooldown >= 0:
-                    commandObject.lastUsed = str(datetime.now())
+                commandObject.lastUsed = str(datetime.now())
+                self._user._db.updateCommandLastUsed(cmd)
                 commandStr: str = self._parser.parseCommand(self.tci, self.message, commandObject.data)
-                
                 self.tci.sendMessage(self.message.channel, commandStr)
-
 
     def onCoolDown(self, commandObj) -> bool:
         try:

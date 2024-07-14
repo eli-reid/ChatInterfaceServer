@@ -37,7 +37,7 @@ class SqliteInterface:
             self._cursor.execute(query)
             if autoCommit:
                 self._conn.commit()
-        except Exception as e:
+        except Error as e:
             print(f"Error: {e}")
     
     def close(self):

@@ -13,6 +13,7 @@ class DatabaseInterface(DB['TYPE']):
         return self._cursor.fetchall()
         
     def fetchOne(self, query: str):
+        self._cursor = self._conn.cursor()
         self._execute(query)
         return self._cursor.fetchone()
     
@@ -21,6 +22,10 @@ class DatabaseInterface(DB['TYPE']):
         self._cursor = self._conn.cursor()
         self._execute(query)
         return self._cursor.fetchall()
+    
+    def update(self, query: str):
+        self._cursor = self._conn.cursor()
+        return self._execute(query)
 
 def dict_factory(cursor, row):
         return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
@@ -30,6 +35,7 @@ def dict_factory(cursor, row):
 def DBConnect(db):
     try:
         db.connect()
+        
         yield db
     finally:
         db.close()

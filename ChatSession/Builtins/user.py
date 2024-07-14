@@ -40,12 +40,9 @@ class User:
         return self._getChecksum(data) == checksum
     
     def updateCommands(self):
-        if self._verifyChecksum(self.commands, self._commandsHash):
+        if not self._verifyChecksum(self.commands, self._commandsHash):
             print("Updating Commands")
-        if self._verifyChecksum(self.quotes, self._quotesHash):
+        if not self._verifyChecksum(self.quotes, self._quotesHash):
             print("Updating Quotes")
-        if self._verifyChecksum(self.streamTimer, self._streamTimerHash):
+        if not self._verifyChecksum(self.streamTimer, self._streamTimerHash):
             print("Updating StreamTimer")
-        
-        
-        

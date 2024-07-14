@@ -1,3 +1,4 @@
+from datetime import datetime
 from ..Database.DatabaseInterface import Database
 from .dataObjects import quoteObj, streamTimerObj, commandObj, UserSettings
 from pickle import dumps, loads
@@ -23,6 +24,7 @@ class UserDatabase:
                 enabled=item['enabled'],
                 lastUsed=item['lastUsed'],
                 user=item['user_id'],
+                command=item['command']
             )
             for item in data
         }
@@ -70,3 +72,8 @@ class UserDatabase:
                         self.commands[command].lastUsed,
                     )
                 db._execute(sql)
+                
+    def updateCommandLastUsed(self, cmd):
+        sql = "UPDATE Commands_commands SET lastUsed='?' WHERE user_id=? AND command='?'",(str(datetime.now()), self.id, cmd)
+        with self.database() as db:
+            db.update(sql)
