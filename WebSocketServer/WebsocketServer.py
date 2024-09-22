@@ -9,13 +9,14 @@ from EventHandler_Edog0049a import EventHandler
 class WebSockServer:
     def __init__(self, url: str = 'localhost', port: int=8001) -> None:
         self.event = EventHandler()
-        self._clients = defaultdict(set)
+        self._clients: defaultdict[str,set[WebSocketServerProtocol]] = defaultdict(set)
         self._url = url
         self._port = port
         self._lock = asyncio.Lock()
         
     async def broadcast(self, message: bytes, path: str)->None:
         clients = await self.getClientsCopy(path)
+        websockets.broadcast(clients,message)
         deadClients = await self.sendToClients(message, clients)
         await self.updateClients(path, clients.difference(deadClients))
     

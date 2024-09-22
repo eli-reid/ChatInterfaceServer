@@ -5,7 +5,7 @@ from Twitch_Edog0049a.ChatInterface.MessageHandler import Message
 
 
 class commandBase(ABC):
-    def __init__(self, tci:TCI, message: Message, cmd:str, roleRequire, cooldown=30, *args, **kwargs ) -> None:
+    def __init__(self, tci:TCI, message: Message, cmd:str, roleRequire=None, cooldown=30, *args, **kwargs ) -> None:
         self._roleReqired = roleRequire
         self.message = message
         self.tci = tci

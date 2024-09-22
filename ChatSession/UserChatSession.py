@@ -1,13 +1,14 @@
 import Twitch_Edog0049a as Twitch
-from threading import Thread
 from Twitch_Edog0049a.ChatInterface.TwitchChatInterface import TCISettings
 from typing import Dict, List, Callable
 from queue import Queue
-from .Builtins.user import User
+from .user import User
 from ChatSession.Settings import TWITCH_CHAT_PORT, TEST_MODE
 from ChatSession.Settings import TWITCH_CHAT_URL, TWITCH_CHAT_CAPABILITIES, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET
 from .utilis import runCallback
 from .chatParser import parser
+import logging
+
 #TODO: 
 # 1. Add a way to get the chat users from the chat
 # 2. store the chat users in the database
@@ -68,8 +69,7 @@ class UserChatSession:
         if not self._twitchChat.isConnected and self._chatSettingsLoaded:
             self._user.cacheAllComands()
             self._twitchChat.start()                 
-            self._twitchChat.connect()
-    
+            
     @property
     def status(self) -> Dict:
         return {
@@ -87,13 +87,13 @@ class UserChatSession:
     def error(self) -> str:
         err = self._error
         self._error = None
-        return err
+        return err 
     
     @error.setter
     def error(self, value: str) -> None:
         self._error = value
         if value is not None:
-            self._runCallback(self.onError, self, value)
+            runCallback(self.onError, self, value)
             
     def _loadChatSettings(self) -> TCISettings:
         self._chatSettingsLoaded = self._hasRequiredChatSettings
@@ -105,6 +105,7 @@ class UserChatSession:
             }
         else:
             settings={}
+        logging.info(f"Settings Loaded: {settings}")
         return TCISettings(**settings)
     
     def _hasRequiredChatSettings(self):
@@ -121,9 +122,9 @@ class UserChatSession:
 
     ############################# Event Handlers #############################
     def _onLoginError(self, sender, message) -> None:
+        self.disconnect()
         self.error = message
         runCallback(self.onLoginFail, sender, message)
-        self.disconnect()
 
     def _onRecieved(self, sender, message: Twitch.MessageType) -> None:
         runCallback(self.onMessage, sender, message)
@@ -133,3 +134,4 @@ class UserChatSession:
 
     def _onDisconnected(self, sender, message) -> None:
         runCallback(self.onDisconnected, sender, message)
+   

@@ -1,7 +1,8 @@
 from datetime import datetime
 from .dataObjects import commandObj
+from typing import Dict
 class CommandParser:
-    def parseNewCommand(self, commandData: list, user_id) -> commandObj:  # type: ignore
+    def parseNewCommand(self, commandData: list, user_id) -> commandObj: 
         """
         cooldown
             +cd - cooldown followed by int
@@ -15,7 +16,7 @@ class CommandParser:
             +uw - wisper only
             +ua - any
         """
-        role: dict = {
+        roleDict: dict = {
             "+b": "broadcaster",
             "+m": "moderator",
             "+e": "editor",
@@ -23,44 +24,49 @@ class CommandParser:
             "+a": "any"
        }
         
-        usage: dict ={
-            "SC": "stream Chat",
+        usageDict: dict ={
+            "SC": "stream chat",
             "SW": "stream whisper",
             "SB": "stream both"
         } 
-       
-        cmd = commandObj()
-        cmd.command = commandData.pop(0)
-        for key, value in role.items():
+        
+        command = commandData.pop(0)
+        for key, value in roleDict.items():
             if key in commandData:
-                cmd.roleRequired = value
+                roleRequired = value
                 commandData.remove(key)
                 break
-        for key, value in usage.items():    
+            
+        for key, value in usageDict.items():    
             if key in commandData:
-                cmd.usage = value
+                usage = value
                 commandData.remove(key)
                 break
-        cooldownIndex = commandData.index("+cd") + 1 if "+cd" in commandData else -1
+            
+        cooldownIndex: int = commandData.index("+cd") + 1 if "+cd" in commandData else -1
+        
         if "+cd" in commandData:
             if  0 < cooldownIndex < len(commandData) and commandData[cooldownIndex].isdigit():
-                cmd.cooldown = commandData.pop(cooldownIndex)
+                cooldown = commandData.pop(cooldownIndex)
             commandData.pop(commandData.index("+cd"))
         else:
-            cmd.cooldown = 5
+            cooldown = 5
               
-        cmd.data = " ".join(commandData)
-        cmd.roleRequired = "any" if cmd.roleRequired is None else cmd.roleRequired
-        cmd.usage = "stream Chat" if cmd.usage is None else cmd.usage
-        cmd.enabled = True
-        cmd.user = user_id
-        cmd.lastUsed = datetime.now()
-        return cmd
+        return commandObj(id=-1,
+                          data=" ".join(commandData), 
+                          roleRequired="any" if roleRequired is None else roleRequired,
+                          usage="stream chat" if usage is None else usage,
+                          cooldown=cooldown,
+                          enabled=True,
+                          lastUsed=datetime.now(),
+                          user_id=user_id,
+                          command=command
+                          )
+        
     
-    def parseCommand(self,tci, message, commandData) -> str:
+    def parseCommand(self,tci, message , commandData) -> str:
         
         """
-        
         Parse List
         $userid - Username in lower case
         $username - display Username as normal
@@ -78,7 +84,7 @@ class CommandParser:
             "$userid": message.username.lower(),
             "$username": message.username,
             "$botname": tci.globalUserState.display_name,
-            #"$targetid": self.data[0],
+            "$targetid": message,
         }
         #parse arguments for message text add to parseItems
         for index, val in enumerate(message.text.split(" ")):

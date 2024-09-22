@@ -1,17 +1,23 @@
 from .MariaDbInterface import MariaDbInterface
 from .SqliteInterface import SqliteInterface
+from typing import TypedDict, Dict
+
+class DbSetting(TypedDict):
+    NAME: str
+    TYPE: object
+    SETTINGS: Dict
 
 
-
-
-SQLITE = {
+SQLITE: DbSetting = {
+    'NAME': 'SQLITE',
     'TYPE' : SqliteInterface,
     'SETTINGS' : {
         'db_file':'D:\\FoxZBot2\\Fox_Z_Bot\\db.sqlite3'
         }
 }
 
-MARIADB = {
+MARIADB: DbSetting = {
+    'NAME': 'MARIADB',
     'TYPE' : MariaDbInterface,
     'SETTINGS' : {
         'user' : None,
@@ -22,4 +28,4 @@ MARIADB = {
     }
 }
 
-DB = SQLITE
+DB: DbSetting = SQLITE

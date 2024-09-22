@@ -1,5 +1,5 @@
-from .dataObjects import quoteObj, streamTimerObj, commandObj, UserSettings
-from .userDB import UserDatabase
+from .Builtins import *
+from .Database import UserDatabase
 from pickle import dumps
 from hashlib import sha256 as hash
 
@@ -9,11 +9,13 @@ class User:
         self.name = name
         self.key = key
         self._db = UserDatabase(self.id)
-        self.commands: dict[str, commandObj] = None
-        self.quotes: dict[str, quoteObj] = None
+        self.commands: dict[str, commandObj] = {}
+        self.quotes: list[quoteObj] = []
         self.notifications = None
-        self.streamTimer: streamTimerObj = None
+        self.streamTimer: streamTimerObj 
         self.settings = self._db.loadSettings()
+        
+
         
     def loadSettings(self):
         self.settings = self._db.loadSettings()
@@ -29,8 +31,8 @@ class User:
 
     def clearCache(self):
         self.updateCommands()
-        self.commands = None
-        self.quotes = None
+        self.commands = {}
+        self.quotes = []
         self.notifications = None
         
     def _getChecksum(self, data):
@@ -39,10 +41,13 @@ class User:
     def _verifyChecksum(self, data, checksum) -> bool:
         return self._getChecksum(data) == checksum
     
+    def addCommand(self, command):
+        ...
+        
     def updateCommands(self):
         if not self._verifyChecksum(self.commands, self._commandsHash):
-            print("Updating Commands")
+            ...
         if not self._verifyChecksum(self.quotes, self._quotesHash):
-            print("Updating Quotes")
+            ...
         if not self._verifyChecksum(self.streamTimer, self._streamTimerHash):
-            print("Updating StreamTimer")
+            ...

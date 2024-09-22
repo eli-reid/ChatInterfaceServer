@@ -1,25 +1,13 @@
 import sqlite3
 from sqlite3 import Error
-from contextlib import contextmanager
-
-
+from typing import Dict, List
+import logging
 class SqliteInterface:
     def __init__(self, db_file, *args, **kwargs):
         self._db_file = db_file
         self._conn = None
         self._cursor = None
         
-   
-    @contextmanager
-    def executer(self, *args, **kwargs):
-        self._connect()
-        try: 
-            yield self
-        finally:
-            self.close()
-        
-    
-    
     def connect(self):
         try:
             self._conn = sqlite3.connect(self._db_file)
@@ -39,6 +27,14 @@ class SqliteInterface:
                 self._conn.commit()
         except Error as e:
             print(f"Error: {e}")
+    
+    def fetchallAsDict(self, query: tuple) -> List[Dict[str, any]]:
+        self._conn.row_factory = self._dict_factory
+        self._execute(query)
+        return self._cursor.fetchall()
+    
+    def _dict_factory(cursor, row)-> Dict[any,any]:
+        return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
     
     def close(self):
         try:
