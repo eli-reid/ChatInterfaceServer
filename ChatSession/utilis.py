@@ -1,16 +1,12 @@
-from typing import Dict, List, Callable, Coroutine
+from typing import Dict, List, Callable, Coroutine, TypeVar
 import asyncio
 
-def runAsyncFunction(func: Coroutine ,*args, **kwargs) -> any:
-    try:
-        loop = asyncio.new_event_loop()
-        return loop.run_until_complete(func(*args, **kwargs))
-    except Exception as e:
-        print(f"_runAsyncFunction Error: {e.args}")
-        return None
+def runAsyncFunction(func,*args, **kwargs) -> None:
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(func(*args, **kwargs))
     
-def runCallback(func: Callable, *args, **kwargs) -> None:
+def runCallback(func, *args, **kwargs) -> None:
     if asyncio.iscoroutinefunction(func):
         runAsyncFunction(func, *args, **kwargs)
     else:
-        func(*args, **kwargs)
+       func(*args, **kwargs)

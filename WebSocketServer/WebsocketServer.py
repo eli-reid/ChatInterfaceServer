@@ -10,13 +10,14 @@ from typing import DefaultDict, overload
 class WebSockServer:
     def __init__(self, url: str = 'localhost', port: int=8001) -> None:
         self.event = EventHandler()
-        self._clients: DefaultDict = defaultdict(set)
+        self._clients = defaultdict(set)
         self._url = url
         self._port = port
         self._lock = asyncio.Lock()
         
     async def broadcast(self, message: bytes, path: str)->None:
         clients = await self.getClientsCopy(path)
+        websockets.broadcast(clients,message)
         deadClients = await self.sendToClients(message, clients)
         await self.updateClients(path, clients.difference(deadClients))
     
@@ -51,10 +52,10 @@ class WebSockServer:
 
     async def _messageHandler(self, clientSocket: WebSocketServerProtocol, path: str) -> None:
         await self.addClient(clientSocket, path)
-        print(f"Client connected to {path}")
         try:
             async for message in clientSocket:
                 self.event.emit(self, 'message', (path,message))
+                await asyncio.sleep(0.01)
         except (ConnectionClosedError, ConnectionClosed, ConnectionClosedOK):
             async with self._lock:
                 self._clients[path].remove(clientSocket)

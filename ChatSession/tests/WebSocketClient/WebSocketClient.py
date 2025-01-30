@@ -1,11 +1,11 @@
 import asyncio
 import contextlib
-from typing import Awaitable, Coroutine, Optional
+from typing import Awaitable, Optional
 import websockets
 import logging
 from websockets.client import WebSocketClientProtocol
-from EventHandler import EventHandler
-from enum import Enum
+from EventHandler_Edog0049a import EventHandler
+
 class WebsocketClient:
     TIMERDEFAULT =.1
     class EVENTENUM():

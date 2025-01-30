@@ -1,28 +1,40 @@
-from .SqliteInterface import SqliteInterface
-#from .MariaDbInterface import MariaDbInterface
-
-
-class DatabaseInterface(SqliteInterface):
-    def __init__(self):
-        super().__init__("F:\\FoxZBot2\\Fox_Z_Bot\\db.sqlite3")
+from typing import Dict, Any
+from .settings import DB
+class DatabaseInterface(DB.get("TYPE")):
+    def __init__(self, *args, **kwargs):
+        super().__init__(**DB['SETTINGS'])
         
-    def insert(self, query: str):
+    def insert(self, query: tuple):
         self._execute(query)
     
-    def fetchall(self, query: str):
+    def fetchall(self, query: tuple):
         self._execute(query)
         return self._cursor.fetchall()
         
-    def fetchOne(self, query: str):
+    def fetchOne(self, query: tuple):
+        self._cursor = self._conn.cursor()
         self._execute(query)
         return self._cursor.fetchone()
     
-    def fetchallAsDict(self, query: str):
-        self._conn.row_factory = self.dict_factory
-        self._cursor = self._conn.cursor()
-        self._execute(query)
-        return self._cursor.fetchall()
+    def fetchallAsDict(self, query: tuple) -> list[Dict[str, Any]]:
+        return super().fetchallAsDict(query)
     
-    def dict_factory(self, cursor, row):
-        return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
+    def update(self, query: str):
+        self._cursor = self._conn.cursor()
+        return self._execute(query)
+
+
+           
+
+class Database:
+    def __init__(self) -> None:
+        self.db = DatabaseInterface()
+        
+    def __enter__(self) -> DatabaseInterface:
+        self.db.connect()
+        return self.db
+    
+    def __exit__(self, type, value, traceback):
+        self.db.close()
+        
         

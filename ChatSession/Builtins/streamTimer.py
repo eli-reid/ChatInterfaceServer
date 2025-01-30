@@ -1,12 +1,12 @@
 import asyncio
 import websockets
 import pickle
-from Twitch.ChatInterface.MessageHandler import Message
-from Twitch.ChatInterface import Chat as TCI
+from Twitch_Edog0049a.ChatInterface.MessageHandler import Message
+from Twitch_Edog0049a.ChatInterface import Chat as TCI
 from .commandBase import commandBase
 from .dataObjects import streamTimerObj
 
-class timer(commandBase):
+class streamTimer(commandBase):
     def __init__(self, tci: TCI, message: Message, user, *args, **kwargs) -> None:
         self._user = user
         self.path=f"{self._user.id}/{self._user.name}/{self._user.streamTimer.token}"
