@@ -4,13 +4,12 @@ from websockets.server import serve, WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
 from collections import defaultdict
 from EventHandler_Edog0049a import EventHandler
-from typing import DefaultDict, overload
 
 
 class WebSockServer:
     def __init__(self, url: str = 'localhost', port: int=8001) -> None:
         self.event = EventHandler()
-        self._clients = defaultdict(set)
+        self._clients: defaultdict[str,set[WebSocketServerProtocol]] = defaultdict(set)
         self._url = url
         self._port = port
         self._lock = asyncio.Lock()
